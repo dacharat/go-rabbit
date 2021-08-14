@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  go-docker-image:
+    build: ./
+    image: go-rabbit
+    depends_on:
+      - rabbitmq
+    ports:
+      - "3000:8080" # localhost:3000
+    container_name: go-rabbit
+    environment:
+      RABBITMQ_HOST: amqp://admin:1234@rabbitmq
+      MONGODB_HOST: mongodb://db
+    networks:
+      - go-rabbit
+    volumes:
+      - ./:/app
+    restart: on-failure
+
+  comsumer:
+    image: go-rabbit-consumer
+    depends_on:
+      - rabbitmq
+    container_name: go-rabbit-consumer
+    environment:
+      RABBITMQ_HOST: amqp://admin:1234@rabbitmq
+      MONGODB_HOST: mongodb://db
+    networks:
+      - go-rabbit
+    restart: on-failure
+
+  # db:
+  #   image: mongo
+  #   container_name: go-rabbitdb
+  #   ports:
+  #     - 27017:27017
+  #   volumes:
+  #     - mongo-db:/data/db
+  #   networks:
+  #     - go-rabbit
+  #   restart: always
+
+  rabbitmq:
+    image: bitnami/rabbitmq:latest
+    container_name: go-rabbitmq
+    networks:
+      - go-rabbit
+    environment:
+      - RABBITMQ_NODE_PORT_NUMBER=5672
+      - RABBITMQ_DEFAULT_VHOST=/
+      - RABBITMQ_USERNAME=admin
+      - RABBITMQ_PASSWORD=1234
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "5672" ]
+      interval: 5s
+      timeout: 15s
+      retries: 1
+
+volumes:
+  mongo-db:
+networks:
+  go-rabbit:
